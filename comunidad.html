@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comunidad CleanCiti — Mel City</title>
+<style>
+/* ── Reset & Base ─────────────────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#f0f2f5;color:#1a1a2e;font-size:14px}
+button{cursor:pointer;border:none;font-family:inherit}
+input,select,textarea{font-family:inherit;font-size:14px}
+a{text-decoration:none}
+
+/* ── Login ────────────────────────────────────────────────────────── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)}
+.login-card{background:#fff;border-radius:16px;padding:40px;width:100%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,.4)}
+.login-logo{text-align:center;margin-bottom:28px}
+.login-logo img{height:48px;object-fit:contain}
+.login-logo h2{margin-top:10px;font-size:16px;color:#555;font-weight:500}
+.login-card h1{font-size:22px;font-weight:700;text-align:center;margin-bottom:24px;color:#1a1a2e}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:12px;font-weight:600;color:#666;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.form-group input{width:100%;padding:11px 14px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:14px;transition:border-color .2s}
+.form-group input:focus{outline:none;border-color:#0f3460}
+.btn-login{width:100%;padding:12px;background:#0f3460;color:#fff;border-radius:8px;font-size:15px;font-weight:600;margin-top:8px;transition:background .2s}
+.btn-login:hover{background:#16213e}
+.login-error{color:#e74c3c;font-size:13px;text-align:center;margin-top:10px;min-height:18px}
+
+/* ── App Layout ───────────────────────────────────────────────────── */
+#app{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:#1a1a2e;color:#fff;padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.3)}
+.topbar-left{display:flex;align-items:center;gap:14px}
+.topbar-logo{height:30px;object-fit:contain}
+.topbar-title{font-size:16px;font-weight:700;color:#e8e8e8}
+.topbar-subtitle{font-size:11px;color:#888;margin-top:1px}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.user-badge{background:#0f3460;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.btn-logout{background:transparent;color:#aaa;font-size:12px;padding:5px 10px;border-radius:6px;transition:color .2s}
+.btn-logout:hover{color:#fff}
+.main{padding:20px;max-width:1600px;margin:0 auto;width:100%}
+
+/* ── KPIs ─────────────────────────────────────────────────────────── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.kpi-card{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.08);border-left:4px solid #ddd;transition:transform .15s}
+.kpi-card:hover{transform:translateY(-2px)}
+.kpi-card.blue{border-left-color:#3498db}
+.kpi-card.green{border-left-color:#27ae60}
+.kpi-card.orange{border-left-color:#e67e22}
+.kpi-card.red{border-left-color:#e74c3c}
+.kpi-label{font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.kpi-value{font-size:28px;font-weight:700;color:#1a1a2e;line-height:1}
+.kpi-sub{font-size:11px;color:#aaa;margin-top:5px}
+
+/* ── Filters ──────────────────────────────────────────────────────── */
+.filter-bar{background:#fff;border-radius:12px;padding:14px 18px;margin-bottom:16px;box-shadow:0 1px 4px rgba(0,0,0,.08);display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.filter-bar input,.filter-bar select{padding:8px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;background:#fafafa;min-width:160px;transition:border-color .2s}
+.filter-bar input:focus,.filter-bar select:focus{outline:none;border-color:#0f3460}
+.filter-bar .filter-label{font-size:12px;font-weight:600;color:#888;white-space:nowrap}
+.filter-bar .btn-clear{background:#f0f2f5;color:#555;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;transition:background .2s}
+.filter-bar .btn-clear:hover{background:#e0e0e0}
+.result-count{margin-left:auto;font-size:12px;color:#888;white-space:nowrap}
+
+/* ── Table ────────────────────────────────────────────────────────── */
+.table-wrap{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);overflow:hidden}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap}
+thead th{background:#1a1a2e;color:#ccc;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;padding:11px 14px;text-align:left;position:sticky;top:0;z-index:10}
+thead th.month-col{text-align:center;padding:11px 5px;min-width:36px}
+tbody tr{border-bottom:1px solid #f0f2f5;transition:background .1s;cursor:pointer}
+tbody tr:hover{background:#f8f9ff}
+tbody tr:last-child{border-bottom:none}
+td{padding:10px 14px;vertical-align:middle}
+td.month-col{padding:10px 4px;text-align:center}
+
+/* Month dot */
+.dot{width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;margin:0 auto;position:relative;cursor:help;transition:transform .1s}
+.dot:hover{transform:scale(1.3)}
+.dot.bought{background:#27ae60;color:#fff}
+.dot.empty{background:#e8eaed;color:#bbb}
+.dot.partial{background:#3498db;color:#fff}
+
+/* Risk badge */
+.risk{display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+.risk.alto{background:#fdecea;color:#c0392b}
+.risk.medio{background:#fff3e0;color:#e67e22}
+.risk.activo{background:#e8f5e9;color:#27ae60}
+.risk.nuevo{background:#e3f2fd;color:#1976d2}
+
+/* Tipo badge */
+.tipo-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.tipo-EJ{background:#e8d5f5;color:#7b1fa2}
+.tipo-MG{background:#d5e8f5;color:#1565c0}
+.tipo-LG{background:#d5f5e3;color:#1b5e20}
+.tipo-LZ{background:#fef3cd;color:#856404}
+.tipo-XX{background:#f0f0f0;color:#666}
+
+/* Action buttons inline */
+.btn-wapp{background:#25d366;color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;transition:background .2s}
+.btn-wapp:hover{background:#128c7e}
+.btn-gestion{background:#0f3460;color:#fff;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;transition:background .2s}
+.btn-gestion:hover{background:#1a4a80}
+.btn-sm{padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700}
+
+/* ── Detail Drawer ────────────────────────────────────────────────── */
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+.drawer-overlay.open{opacity:1;pointer-events:all}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:min(480px,100vw);background:#fff;z-index:201;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-4px 0 24px rgba(0,0,0,.18)}
+.drawer.open{transform:translateX(0)}
+.drawer-header{background:#1a1a2e;color:#fff;padding:18px 20px;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.drawer-name{font-size:15px;font-weight:700;line-height:1.3;max-width:340px}
+.drawer-meta{font-size:11px;color:#aaa;margin-top:4px}
+.btn-close{background:transparent;color:#aaa;font-size:20px;padding:0 4px;line-height:1;transition:color .2s}
+.btn-close:hover{color:#fff}
+.drawer-body{flex:1;overflow-y:auto;padding:0}
+.drawer-section{padding:16px 20px;border-bottom:1px solid #f0f2f5}
+.drawer-section h3{font-size:11px;font-weight:700;color:#888;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+
+/* Contact actions */
+.contact-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.tel-info{font-size:13px;color:#555;margin-bottom:8px}
+.tel-info span{font-weight:600;color:#222}
+
+/* Monthly history mini-table */
+.hist-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.hist-cell{background:#f8f9fa;border-radius:8px;padding:8px;text-align:center}
+.hist-cell.bought{background:#e8f5e9}
+.hist-cell.empty{background:#fafafa;opacity:.6}
+.hist-month{font-size:10px;color:#888;font-weight:600}
+.hist-amount{font-size:12px;font-weight:700;color:#27ae60;margin-top:2px}
+.hist-amount.zero{color:#ccc}
+
+/* Gestiones list */
+.gestion-item{background:#f8f9fa;border-radius:8px;padding:12px;margin-bottom:8px;border-left:3px solid #ddd}
+.gestion-item.positivo{border-left-color:#27ae60}
+.gestion-item.sin-respuesta{border-left-color:#f39c12}
+.gestion-item.negativo{border-left-color:#e74c3c}
+.gestion-item.pendiente{border-left-color:#3498db}
+.gestion-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.gestion-tipo{font-size:11px;font-weight:700;color:#555}
+.gestion-fecha{font-size:11px;color:#aaa}
+.gestion-resultado{font-size:11px;font-weight:600;margin-bottom:3px}
+.gestion-comment{font-size:12px;color:#666;line-height:1.4}
+.gestion-seguimiento{font-size:11px;color:#3498db;margin-top:4px}
+.empty-state{text-align:center;padding:24px;color:#bbb;font-size:13px}
+
+/* Add gestión form */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.form-row.full{grid-template-columns:1fr}
+.form-row label{display:block;font-size:11px;font-weight:600;color:#666;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+.form-row select,.form-row input,.form-row textarea{width:100%;padding:8px 10px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:13px;background:#fafafa;transition:border-color .2s;resize:vertical}
+.form-row select:focus,.form-row input:focus,.form-row textarea:focus{outline:none;border-color:#0f3460}
+.btn-save{background:#0f3460;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;width:100%;margin-top:4px;transition:background .2s}
+.btn-save:hover{background:#16213e}
+
+/* ── WhatsApp Modal ───────────────────────────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;display:none;align-items:center;justify-content:center;padding:20px}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:14px;padding:24px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal h3{font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.modal textarea{width:100%;min-height:120px;padding:10px 12px;border:1.5px solid #e0e0e0;border-radius:8px;font-size:13px;line-height:1.5;resize:vertical;margin-bottom:14px}
+.modal textarea:focus{outline:none;border-color:#25d366}
+.modal-actions{display:flex;gap:10px;justify-content:flex-end}
+.btn-cancel{background:#f0f0f0;color:#555;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:600;transition:background .2s}
+.btn-cancel:hover{background:#e0e0e0}
+.btn-send-wapp{background:#25d366;color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;transition:background .2s}
+.btn-send-wapp:hover{background:#128c7e}
+
+/* ── Misc ─────────────────────────────────────────────────────────── */
+.spinner{display:inline-block;width:18px;height:18px;border:2px solid #ddd;border-top-color:#0f3460;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:12px;color:#888}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px}
+.no-phone{color:#ccc;font-size:11px;font-style:italic}
+@media(max-width:600px){
+  .kpi-grid{grid-template-columns:1fr 1fr}
+  .filter-bar{flex-direction:column;align-items:stretch}
+  .filter-bar input,.filter-bar select{min-width:unset;width:100%}
+  .hist-grid{grid-template-columns:repeat(3,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ─────────────────────────────────────────────────────────────── -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div style="font-size:28px">🏪</div>
+      <h2>Mel City S.A.</h2>
+    </div>
+    <h1>Comunidad CleanCiti</h1>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="usuario@melcity.com.ar" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+    <button class="btn-login" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-err"></div>
+  </div>
+</div>
+
+<!-- ── APP ───────────────────────────────────────────────────────────────── -->
+<div id="app">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="topbar-title">Comunidad CleanCiti</div>
+        <div class="topbar-subtitle">Dashboard de Ventas y Gestiones</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="user-badge" id="user-badge">—</span>
+      <button class="btn-logout" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="kpi-grid">
+      <div class="kpi-card blue">
+        <div class="kpi-label">Clientes Totales</div>
+        <div class="kpi-value" id="kpi-total">—</div>
+        <div class="kpi-sub">en el período</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">Activos (últ. 3 meses)</div>
+        <div class="kpi-value" id="kpi-activos">—</div>
+        <div class="kpi-sub" id="kpi-activos-pct">—</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">En Riesgo de Churn</div>
+        <div class="kpi-value" id="kpi-riesgo">—</div>
+        <div class="kpi-sub" id="kpi-riesgo-pct">—</div>
+      </div>
+      <div class="kpi-card orange">
+        <div class="kpi-label">Revenue en Riesgo</div>
+        <div class="kpi-value" id="kpi-revenue">—</div>
+        <div class="kpi-sub" id="kpi-revenue-pct">—</div>
+      </div>
+      <div class="kpi-card blue" style="border-left-color:#9b59b6">
+        <div class="kpi-label">Gestiones Registradas</div>
+        <div class="kpi-value" id="kpi-gestiones">—</div>
+        <div class="kpi-sub">total acumulado</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <span class="filter-label">Filtros:</span>
+      <input type="search" id="f-buscar" placeholder="🔍 Buscar cliente…" oninput="applyFilters()">
+      <select id="f-vendedor" onchange="applyFilters()">
+        <option value="">Todos los vendedores</option>
+      </select>
+      <select id="f-tipo" onchange="applyFilters()">
+        <option value="">Todos los tipos</option>
+      </select>
+      <select id="f-riesgo" onchange="applyFilters()">
+        <option value="">Todos los estados</option>
+        <option value="alto">🔴 Alto riesgo</option>
+        <option value="medio">🟡 Medio riesgo</option>
+        <option value="activo">🟢 Activo</option>
+        <option value="nuevo">🔵 Nuevo</option>
+      </select>
+      <button class="btn-clear" onclick="clearFilters()">✕ Limpiar</button>
+      <span class="result-count" id="result-count"></span>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <div id="table-container">
+        <div class="loading-screen">
+          <div class="spinner"></div>
+          <span>Cargando datos…</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ── DETAIL DRAWER ─────────────────────────────────────────────────────── -->
+<div class="drawer-overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div>
+      <div class="drawer-name" id="d-name">—</div>
+      <div class="drawer-meta" id="d-meta">—</div>
+    </div>
+    <button class="btn-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawer-body">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- ── WHATSAPP MODAL ─────────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="wapp-modal">
+  <div class="modal">
+    <h3>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#25d366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Enviar WhatsApp
+    </h3>
+    <textarea id="wapp-msg"></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeWappModal()">Cancelar</button>
+      <button class="btn-send-wapp" onclick="sendWapp()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        Abrir WhatsApp
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Config ───────────────────────────────────────────────────────────────────
+const SUPA_URL = 'https://cclzkqzrwhedkkmigfis.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNjbHprcXpyd2hlZGtrbWlnZmlzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjMxNDEsImV4cCI6MjA4OTUzOTE0MX0.WRdKrnZ_ZxzFwj4fXIoi_LUWlABcSoEP9ec3X7lHV58';
+const ADMINS = ['christian@melcity.com.ar','ignacio@melcity.com.ar','patricio@melcity.com.ar','sol@melcity.com.ar','valentin@melcity.com.ar','gonzalo@melcity.com.ar','nacho@melcity.com.ar'];
+
+// ── State ────────────────────────────────────────────────────────────────────
+let currentUser = null;
+let allClients = [];      // merged client data
+let allGestiones = [];
+let months = [];          // sorted ['2025-05', '2025-06', …]
+let filteredClients = [];
+let wappPhone = '';
+let wappName = '';
+
+// ── Auth ─────────────────────────────────────────────────────────────────────
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  document.getElementById('login-err').textContent = '';
+  try {
+    const r = await fetch(`${SUPA_URL}/auth/v1/token?grant_type=password`, {
+      method: 'POST',
+      headers: {'apikey': SUPA_KEY, 'Content-Type': 'application/json'},
+      body: JSON.stringify({email, password: pass})
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error_description || d.msg || 'Error al ingresar');
+    currentUser = {email: d.user.email, token: d.access_token};
+    localStorage.setItem('mc_com_session', JSON.stringify(currentUser));
+    showApp();
+  } catch(e) {
+    document.getElementById('login-err').textContent = e.message;
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('mc_com_session');
+  currentUser = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+// ── API ──────────────────────────────────────────────────────────────────────
+function apiHeaders() {
+  return {
+    'apikey': SUPA_KEY,
+    'Authorization': `Bearer ${SUPA_KEY}`,
+    'Content-Type': 'application/json',
+    'Prefer': 'return=representation'
+  };
+}
+
+async function apiFetch(path) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${path}`, {headers: apiHeaders()});
+  if (!r.ok) throw new Error(`API error ${r.status}`);
+  return r.json();
+}
+
+async function apiPost(table, body) {
+  const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: {...apiHeaders(), 'Prefer': 'resolution=merge-duplicates,return=representation'},
+    body: JSON.stringify(body)
+  });
+  if (!r.ok) throw new Error(`API error ${r.status}: ${await r.text()}`);
+  return r.json();
+}
+
+// ── Data Loading ─────────────────────────────────────────────────────────────
+async function loadData() {
+  const [clientes, ventas, gestiones] = await Promise.all([
+    apiFetch('clientes_comunidad?select=*&order=razon_social'),
+    apiFetch('ventas_comunidad?select=*'),
+    apiFetch('gestiones_comunidad?select=*&order=fecha_gestion.desc')
+  ]);
+
+  allGestiones = gestiones;
+
+  // Build months list from ventas data
+  const monthSet = new Set(ventas.map(v => v.mes));
+  months = [...monthSet].sort();
+
+  // Build ventas matrix: {razon_social: {mes: importe}}
+  const ventasMap = {};
+  for (const v of ventas) {
+    if (!ventasMap[v.razon_social]) ventasMap[v.razon_social] = {};
+    ventasMap[v.razon_social][v.mes] = (ventasMap[v.razon_social][v.mes] || 0) + v.importe;
+  }
+
+  // Build gestiones count per client
+  const gestionesCount = {};
+  for (const g of gestiones) {
+    gestionesCount[g.razon_social] = (gestionesCount[g.razon_social] || 0) + 1;
+  }
+
+  // Merge: start with clients from ventas (might not all be in clientes_comunidad)
+  const clientesMeta = {};
+  for (const c of clientes) clientesMeta[c.razon_social] = c;
+
+  const clienteNames = new Set([
+    ...Object.keys(ventasMap),
+    ...clientes.map(c => c.razon_social)
+  ]);
+
+  // Determine the last 3 months for risk classification
+  const lastMonth  = months[months.length - 1];
+  const last3      = new Set(months.slice(-3));
+  const last1      = months[months.length - 1];
+
+  allClients = [...clienteNames].map(name => {
+    const meta    = clientesMeta[name] || {};
+    const meses   = ventasMap[name] || {};
+    const total   = Object.values(meses).reduce((s, v) => s + v, 0);
+    const activos = months.filter(m => meses[m] > 0);
+    const lastActive = activos.length ? activos[activos.length - 1] : null;
+
+    // Risk classification
+    const hasLast3  = [...last3].some(m => meses[m] > 0);
+    const hasLast1  = meses[last1] > 0;
+    const hadBefore = months.slice(0, -3).some(m => meses[m] > 0);
+
+    let risk;
+    if (activos.length === 0) risk = 'nuevo'; // shouldn't happen
+    else if (!hasLast3 && hadBefore) risk = 'alto';
+    else if (!hasLast1 && hasLast3 && hadBefore) risk = 'medio';
+    else if (hasLast1) risk = 'activo';
+    else risk = 'nuevo';
+
+    return {
+      razon_social: name,
+      tipo_cliente: meta.tipo_cliente || '',
+      vendedor:     meta.vendedor || '',
+      telefono:     meta.telefono || '',
+      telefono2:    meta.telefono2 || '',
+      email:        meta.email || '',
+      meses,
+      total,
+      lastActive,
+      risk,
+      gestionesCount: gestionesCount[name] || 0,
+    };
+  });
+
+  // Sort: risk order (alto first), then total desc
+  const riskOrder = {alto: 0, medio: 1, activo: 2, nuevo: 3};
+  allClients.sort((a, b) => {
+    const ro = riskOrder[a.risk] - riskOrder[b.risk];
+    return ro !== 0 ? ro : b.total - a.total;
+  });
+
+  populateFilters();
+  applyFilters();
+  updateKPIs();
+}
+
+function updateKPIs() {
+  const total = allClients.length;
+  const activos = allClients.filter(c => c.risk === 'activo').length;
+  const riesgo  = allClients.filter(c => c.risk === 'alto').length;
+  const revenueRiesgo = allClients.filter(c => c.risk === 'alto').reduce((s, c) => s + c.total, 0);
+  const totalRevenue  = allClients.reduce((s, c) => s + c.total, 0);
+
+  document.getElementById('kpi-total').textContent = total.toLocaleString('es-AR');
+  document.getElementById('kpi-activos').textContent = activos.toLocaleString('es-AR');
+  document.getElementById('kpi-activos-pct').textContent = `${Math.round(activos/total*100)}% del total`;
+  document.getElementById('kpi-riesgo').textContent = riesgo.toLocaleString('es-AR');
+  document.getElementById('kpi-riesgo-pct').textContent = `${Math.round(riesgo/total*100)}% del total`;
+  document.getElementById('kpi-revenue').textContent = '$' + (revenueRiesgo/1e6).toFixed(1) + 'M';
+  document.getElementById('kpi-revenue-pct').textContent = `${Math.round(revenueRiesgo/totalRevenue*100)}% de la facturación`;
+  document.getElementById('kpi-gestiones').textContent = allGestiones.length.toLocaleString('es-AR');
+}
+
+// ── Filters ──────────────────────────────────────────────────────────────────
+function populateFilters() {
+  const vendedores = [...new Set(allClients.map(c => c.vendedor).filter(Boolean))].sort();
+  const tipos      = [...new Set(allClients.map(c => tipoCodigo(c.tipo_cliente)).filter(Boolean))].sort();
+
+  const vSel = document.getElementById('f-vendedor');
+  vendedores.forEach(v => {
+    const o = document.createElement('option');
+    o.value = v; o.textContent = v;
+    vSel.appendChild(o);
+  });
+
+  const tSel = document.getElementById('f-tipo');
+  tipos.forEach(t => {
+    const o = document.createElement('option');
+    o.value = t; o.textContent = 'Comunidad ' + t;
+    tSel.appendChild(o);
+  });
+}
+
+function applyFilters() {
+  const q       = document.getElementById('f-buscar').value.toLowerCase();
+  const vend    = document.getElementById('f-vendedor').value;
+  const tipo    = document.getElementById('f-tipo').value;
+  const riesgo  = document.getElementById('f-riesgo').value;
+
+  filteredClients = allClients.filter(c => {
+    if (q && !c.razon_social.toLowerCase().includes(q)) return false;
+    if (vend && c.vendedor !== vend) return false;
+    if (tipo && tipoCodigo(c.tipo_cliente) !== tipo) return false;
+    if (riesgo && c.risk !== riesgo) return false;
+    return true;
+  });
+
+  document.getElementById('result-count').textContent =
+    `${filteredClients.length} de ${allClients.length} clientes`;
+  renderTable();
+}
+
+function clearFilters() {
+  document.getElementById('f-buscar').value = '';
+  document.getElementById('f-vendedor').value = '';
+  document.getElementById('f-tipo').value = '';
+  document.getElementById('f-riesgo').value = '';
+  applyFilters();
+}
+
+// ── Table Rendering ───────────────────────────────────────────────────────────
+function formatMes(mes) {
+  const [y, m] = mes.split('-');
+  const names = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return names[parseInt(m)-1] + '-' + y.slice(2);
+}
+
+function tipoCodigo(tipo) {
+  if (!tipo) return 'XX';
+  const m = tipo.match(/\b(EJ|MG|LG|LZ|LD|LP|LR)\b/i);
+  return m ? m[1].toUpperCase() : 'XX';
+}
+
+function tipoBadge(tipo) {
+  const code = tipoCodigo(tipo);
+  return `<span class="tipo-badge tipo-${code}">${code}</span>`;
+}
+
+function riskBadge(risk) {
+  const labels = {alto:'Alto', medio:'Medio', activo:'Activo', nuevo:'Nuevo'};
+  return `<span class="risk ${risk}">${labels[risk]||risk}</span>`;
+}
+
+function renderTable() {
+  const cont = document.getElementById('table-container');
+  if (!filteredClients.length) {
+    cont.innerHTML = '<div class="loading-screen" style="height:200px">No hay clientes con esos filtros.</div>';
+    return;
+  }
+
+  // Max 5 months visible by default; all visible on scroll (show last 13 months)
+  const visMonths = months.slice(-13);
+
+  let html = `<div class="table-scroll"><table>
+  <thead><tr>
+    <th>Razón Social</th>
+    <th>Tipo</th>
+    <th>Vendedor</th>
+    ${visMonths.map(m => `<th class="month-col" title="${m}">${formatMes(m)}</th>`).join('')}
+    <th>Último activo</th>
+    <th style="text-align:right">Total período</th>
+    <th>Estado</th>
+    <th>Gestiones</th>
+    <th></th>
+  </tr></thead>
+  <tbody>`;
+
+  for (const c of filteredClients) {
+    const monthDots = visMonths.map(m => {
+      const imp = c.meses[m];
+      if (imp > 0) {
+        const formatted = imp >= 1000 ? '$' + (imp/1000).toFixed(0) + 'k' : '$' + Math.round(imp);
+        return `<td class="month-col"><div class="dot bought" title="${m}: $${imp.toLocaleString('es-AR', {maximumFractionDigits:0})}">✓</div></td>`;
+      }
+      return `<td class="month-col"><div class="dot empty" title="${m}: sin compra">·</div></td>`;
+    }).join('');
+
+    const hasWapp = c.telefono || c.telefono2;
+    const gCount = c.gestionesCount > 0
+      ? `<span style="background:#e8d5f5;color:#7b1fa2;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">${c.gestionesCount}</span>`
+      : `<span style="color:#ccc;font-size:11px">—</span>`;
+
+    html += `<tr onclick="openDrawer('${c.razon_social.replace(/'/g,"\\'")}')">
+      <td style="font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis">${c.razon_social}</td>
+      <td>${tipoBadge(c.tipo_cliente)}</td>
+      <td style="color:#555;font-size:12px">${(c.vendedor||'').split(',')[0]}</td>
+      ${monthDots}
+      <td style="color:#888;font-size:12px">${c.lastActive ? formatMes(c.lastActive) : '—'}</td>
+      <td style="text-align:right;font-weight:700;color:#1a1a2e">$${Math.round(c.total).toLocaleString('es-AR')}</td>
+      <td>${riskBadge(c.risk)}</td>
+      <td style="text-align:center">${gCount}</td>
+      <td onclick="event.stopPropagation()">
+        ${hasWapp ? `<button class="btn-wapp" onclick="openWappModal('${c.razon_social.replace(/'/g,"\\'")}','${(c.telefono||c.telefono2).replace(/'/g,"\\'")}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          WA
+        </button>` : `<span class="no-phone">sin tel.</span>`}
+      </td>
+    </tr>`;
+  }
+
+  html += '</tbody></table></div>';
+  cont.innerHTML = html;
+}
+
+// ── Detail Drawer ─────────────────────────────────────────────────────────────
+function openDrawer(name) {
+  const c = allClients.find(x => x.razon_social === name);
+  if (!c) return;
+
+  document.getElementById('d-name').textContent = c.razon_social;
+  document.getElementById('d-meta').textContent =
+    [tipoCodigo(c.tipo_cliente) !== 'XX' ? 'Comunidad '+tipoCodigo(c.tipo_cliente) : '',
+     c.vendedor ? 'Vend: '+c.vendedor.split(',')[0] : ''].filter(Boolean).join(' · ');
+
+  const gests = allGestiones.filter(g => g.razon_social === name);
+  const phone  = c.telefono || c.telefono2;
+
+  let body = '';
+
+  // --- Contact section ---
+  body += `<div class="drawer-section">
+    <h3>Contacto</h3>`;
+  if (phone) {
+    const waNum = cleanPhone(phone);
+    body += `<div class="tel-info">📱 Teléfono: <span>${phone}</span></div>`;
+    if (c.telefono2 && c.telefono2 !== c.telefono) {
+      body += `<div class="tel-info" style="margin-top:2px">📱 Tel. 2: <span>${c.telefono2}</span></div>`;
+    }
+    body += `<div class="contact-row">
+      <button class="btn-wapp" style="padding:8px 14px;font-size:12px" onclick="openWappModal('${name.replace(/'/g,"\\'")}','${phone.replace(/'/g,"\\'")}')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+        Enviar WhatsApp
+      </button>`;
+    if (c.email) {
+      body += `<a href="mailto:${c.email}" class="btn-gestion" style="padding:8px 14px;font-size:12px">✉ Email</a>`;
+    }
+    body += `</div>`;
+  } else {
+    body += `<div class="no-phone" style="font-size:13px">Sin teléfono registrado.</div>`;
+    if (c.email) {
+      body += `<div style="margin-top:8px"><a href="mailto:${c.email}" class="btn-gestion" style="padding:8px 14px;font-size:12px">✉ Email</a></div>`;
+    }
+  }
+  body += `</div>`;
+
+  // --- History section ---
+  body += `<div class="drawer-section">
+    <h3>Historial de Compras — Total período: <strong>$${Math.round(c.total).toLocaleString('es-AR')}</strong></h3>
+    <div class="hist-grid">`;
+  for (const m of months) {
+    const imp = c.meses[m] || 0;
+    body += `<div class="hist-cell ${imp > 0 ? 'bought' : 'empty'}">
+      <div class="hist-month">${formatMes(m)}</div>
+      <div class="hist-amount ${imp === 0 ? 'zero' : ''}">${imp > 0 ? '$'+Math.round(imp).toLocaleString('es-AR') : '—'}</div>
+    </div>`;
+  }
+  body += `</div></div>`;
+
+  // --- Add gestión form ---
+  body += `<div class="drawer-section">
+    <h3>Registrar Gestión</h3>
+    <div class="form-row">
+      <div><label>Tipo</label>
+        <select id="g-tipo">
+          <option>WhatsApp</option><option>Llamada</option><option>Visita</option><option>Email</option><option>Otro</option>
+        </select></div>
+      <div><label>Resultado</label>
+        <select id="g-resultado">
+          <option>Pendiente</option><option>Sin respuesta</option><option>Positivo</option><option>Negativo</option>
+        </select></div>
+    </div>
+    <div class="form-row full">
+      <div><label>Comentario</label>
+        <textarea id="g-comentario" rows="3" placeholder="Ej: Le ofrecí promo de combo, va a consultar…"></textarea></div>
+    </div>
+    <div class="form-row">
+      <div><label>Fecha gestión</label>
+        <input type="date" id="g-fecha" value="${new Date().toISOString().slice(0,10)}"></div>
+      <div><label>Fecha seguimiento</label>
+        <input type="date" id="g-seguimiento"></div>
+    </div>
+    <button class="btn-save" onclick="saveGestion('${name.replace(/'/g,"\\'")}')">💾 Guardar Gestión</button>
+  </div>`;
+
+  // --- Gestiones history ---
+  body += `<div class="drawer-section">
+    <h3>Historial de Gestiones (${gests.length})</h3>`;
+  if (!gests.length) {
+    body += `<div class="empty-state">Sin gestiones registradas.</div>`;
+  } else {
+    for (const g of gests) {
+      const resClass = (g.resultado||'').toLowerCase().replace(/ /g,'-');
+      body += `<div class="gestion-item ${resClass}">
+        <div class="gestion-header">
+          <span class="gestion-tipo">${g.tipo||'—'}</span>
+          <span class="gestion-fecha">${g.fecha_gestion}</span>
+        </div>
+        <div class="gestion-resultado" style="color:${resultColor(g.resultado)}">${g.resultado||'—'}</div>
+        ${g.comentario ? `<div class="gestion-comment">${g.comentario}</div>` : ''}
+        ${g.fecha_seguimiento ? `<div class="gestion-seguimiento">📅 Seguimiento: ${g.fecha_seguimiento}</div>` : ''}
+        ${g.vendedor ? `<div style="font-size:11px;color:#aaa;margin-top:3px">por ${g.vendedor}</div>` : ''}
+      </div>`;
+    }
+  }
+  body += `</div>`;
+
+  document.getElementById('drawer-body').innerHTML = body;
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+}
+
+function resultColor(r) {
+  if (!r) return '#888';
+  const map = {'Positivo':'#27ae60','Sin respuesta':'#f39c12','Negativo':'#e74c3c','Pendiente':'#3498db'};
+  return map[r] || '#888';
+}
+
+// ── Save Gestión ──────────────────────────────────────────────────────────────
+async function saveGestion(name) {
+  const tipo        = document.getElementById('g-tipo').value;
+  const resultado   = document.getElementById('g-resultado').value;
+  const comentario  = document.getElementById('g-comentario').value.trim();
+  const fecha       = document.getElementById('g-fecha').value;
+  const seguimiento = document.getElementById('g-seguimiento').value || null;
+
+  if (!fecha) { alert('Indicá la fecha de la gestión.'); return; }
+
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Guardando…';
+  btn.disabled = true;
+
+  try {
+    await apiPost('gestiones_comunidad', {
+      razon_social: name,
+      vendedor: currentUser?.email?.split('@')[0] || null,
+      tipo, resultado, comentario, fecha_gestion: fecha, fecha_seguimiento: seguimiento
+    });
+
+    // Reload gestiones and refresh drawer
+    allGestiones = await apiFetch('gestiones_comunidad?select=*&order=fecha_gestion.desc');
+    const c = allClients.find(x => x.razon_social === name);
+    if (c) c.gestionesCount = allGestiones.filter(g => g.razon_social === name).length;
+    document.getElementById('kpi-gestiones').textContent = allGestiones.length.toLocaleString('es-AR');
+    openDrawer(name);
+    renderTable();
+  } catch(e) {
+    alert('Error al guardar: ' + e.message);
+    btn.textContent = '💾 Guardar Gestión';
+    btn.disabled = false;
+  }
+}
+
+// ── WhatsApp ──────────────────────────────────────────────────────────────────
+function cleanPhone(raw) {
+  if (!raw) return '';
+  let digits = raw.replace(/\D/g, '');
+  if (digits.startsWith('54')) return digits;
+  if (digits.startsWith('0')) digits = digits.slice(1);
+  // Argentine mobile: 10 digits → add 549
+  if (digits.length === 10) return '549' + digits;
+  if (digits.length === 11 && digits.startsWith('9')) return '54' + digits;
+  return '549' + digits;
+}
+
+function openWappModal(name, phone) {
+  wappPhone = phone;
+  wappName  = name;
+  const firstName = name.split(' ')[0];
+  const firstName2 = firstName.charAt(0) + firstName.slice(1).toLowerCase();
+  document.getElementById('wapp-msg').value =
+    `Hola ${firstName2}! 👋 Te contactamos desde Mel City.\n\n¿Necesitás reponer stock de productos CleanCiti? Podemos ayudarte con una propuesta. 😊`;
+  document.getElementById('wapp-modal').classList.add('open');
+}
+
+function closeWappModal() {
+  document.getElementById('wapp-modal').classList.remove('open');
+}
+
+function sendWapp() {
+  const num = cleanPhone(wappPhone);
+  const msg = encodeURIComponent(document.getElementById('wapp-msg').value);
+  window.open(`https://wa.me/${num}?text=${msg}`, '_blank');
+  closeWappModal();
+
+  // Auto-register a WhatsApp gestión for the current client
+  const name = wappName;
+  setTimeout(() => {
+    const drawer = document.getElementById('drawer');
+    if (drawer.classList.contains('open') && document.getElementById('d-name').textContent === name) {
+      document.getElementById('g-tipo').value = 'WhatsApp';
+      document.getElementById('g-resultado').value = 'Pendiente';
+      document.getElementById('g-comentario').value = 'WhatsApp enviado — ' + document.getElementById('wapp-msg').value.slice(0, 60) + '…';
+    }
+  }, 300);
+}
+
+// Close modal on overlay click
+document.getElementById('wapp-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeWappModal();
+});
+
+// ── App Init ──────────────────────────────────────────────────────────────────
+async function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('user-badge').textContent = currentUser.email.split('@')[0];
+
+  try {
+    await loadData();
+  } catch(e) {
+    document.getElementById('table-container').innerHTML =
+      `<div class="loading-screen" style="height:200px;color:#e74c3c">Error cargando datos: ${e.message}</div>`;
+  }
+}
+
+// Check session on load
+const saved = localStorage.getItem('mc_com_session');
+if (saved) {
+  try {
+    currentUser = JSON.parse(saved);
+    showApp();
+  } catch {
+    localStorage.removeItem('mc_com_session');
+  }
+}
+</script>
+</body>
+</html>
