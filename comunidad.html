@@ -380,6 +380,24 @@ async function apiFetch(path) {
   return r.json();
 }
 
+async function apiFetchAll(table, params = '') {
+  const PAGE = 1000;
+  let offset = 0, all = [];
+  while (true) {
+    const sep = params.includes('?') ? '&' : '?';
+    const r = await fetch(
+      `${SUPA_URL}/rest/v1/${table}${params}${sep}limit=${PAGE}&offset=${offset}`,
+      {headers: {...apiHeaders(), 'Prefer': 'count=none'}}
+    );
+    if (!r.ok) throw new Error(`API error ${r.status}`);
+    const page = await r.json();
+    all = all.concat(page);
+    if (page.length < PAGE) break;
+    offset += PAGE;
+  }
+  return all;
+}
+
 async function apiPost(table, body) {
   const r = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
     method: 'POST',
@@ -393,9 +411,9 @@ async function apiPost(table, body) {
 // ── Data Loading ─────────────────────────────────────────────────────────────
 async function loadData() {
   const [clientes, ventas, gestiones] = await Promise.all([
-    apiFetch('clientes_comunidad?select=*&order=razon_social'),
-    apiFetch('ventas_comunidad?select=*'),
-    apiFetch('gestiones_comunidad?select=*&order=fecha_gestion.desc')
+    apiFetchAll('clientes_comunidad', '?select=*&order=razon_social'),
+    apiFetchAll('ventas_comunidad', '?select=*'),
+    apiFetchAll('gestiones_comunidad', '?select=*&order=fecha_gestion.desc')
   ]);
 
   allGestiones = gestiones;
