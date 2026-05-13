@@ -333,6 +333,8 @@ let allGestiones = [];
 let months = [];          // sorted ['2025-05', '2025-06', …]
 let filteredClients = [];
 let wappPhone = '';
+let monthOffset = 0;      // how many months back from the end to start showing
+const MONTHS_WIN = 6;     // months visible at once
 let wappName = '';
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
@@ -553,6 +555,13 @@ function applyFilters() {
   renderTable();
 }
 
+function shiftMonths(dir) {
+  // dir = -1 → ver meses anteriores, dir = 1 → ver meses más recientes
+  const maxOffset = months.length - MONTHS_WIN;
+  monthOffset = Math.max(0, Math.min(maxOffset, monthOffset - dir));
+  renderTable();
+}
+
 function clearFilters() {
   document.getElementById('f-buscar').value = '';
   document.getElementById('f-vendedor').value = '';
@@ -591,15 +600,28 @@ function renderTable() {
     return;
   }
 
-  // Max 5 months visible by default; all visible on scroll (show last 13 months)
-  const visMonths = months.slice(-13);
+  // Window of months with arrow navigation
+  const totalMonths = months.length;
+  const startIdx = Math.max(0, totalMonths - MONTHS_WIN - monthOffset);
+  const endIdx   = Math.max(MONTHS_WIN, totalMonths - monthOffset);
+  const visMonths = months.slice(startIdx, endIdx);
+  const canPrev = startIdx > 0;
+  const canNext = monthOffset > 0;
 
   let html = `<div class="table-scroll"><table>
   <thead><tr>
     <th>Razón Social</th>
     <th>Tipo</th>
     <th>Vendedor</th>
+    <th class="month-col" style="padding:6px 2px">
+      <button onclick="shiftMonths(-1)" title="Meses anteriores"
+        style="background:${canPrev?'#3a4a6e':'#2a3050'};color:${canPrev?'#fff':'#555'};border:none;border-radius:4px;width:22px;height:22px;cursor:${canPrev?'pointer':'default'};font-size:13px;line-height:1">‹</button>
+    </th>
     ${visMonths.map(m => `<th class="month-col" title="${m}">${formatMes(m)}</th>`).join('')}
+    <th class="month-col" style="padding:6px 2px">
+      <button onclick="shiftMonths(1)" title="Meses siguientes"
+        style="background:${canNext?'#3a4a6e':'#2a3050'};color:${canNext?'#fff':'#555'};border:none;border-radius:4px;width:22px;height:22px;cursor:${canNext?'pointer':'default'};font-size:13px;line-height:1">›</button>
+    </th>
     <th>Último activo</th>
     <th style="text-align:right">Total período</th>
     <th>Estado</th>
@@ -609,14 +631,12 @@ function renderTable() {
   <tbody>`;
 
   for (const c of filteredClients) {
-    const monthDots = visMonths.map(m => {
+    const dotCells = visMonths.map(m => {
       const imp = c.meses[m];
-      if (imp > 0) {
-        const formatted = imp >= 1000 ? '$' + (imp/1000).toFixed(0) + 'k' : '$' + Math.round(imp);
-        return `<td class="month-col"><div class="dot bought" title="${m}: $${imp.toLocaleString('es-AR', {maximumFractionDigits:0})}">✓</div></td>`;
-      }
+      if (imp > 0) return `<td class="month-col"><div class="dot bought" title="${m}: $${imp.toLocaleString('es-AR', {maximumFractionDigits:0})}">✓</div></td>`;
       return `<td class="month-col"><div class="dot empty" title="${m}: sin compra">·</div></td>`;
     }).join('');
+    const monthDots = '<td></td>' + dotCells + '<td></td>';
 
     const hasWapp = c.telefono || c.telefono2;
     const gCount = c.gestionesCount > 0
