@@ -456,10 +456,8 @@ async function loadData() {
   const clientesMeta = {};
   for (const c of clientes) clientesMeta[c.razon_social] = c;
 
-  const clienteNames = new Set([
-    ...Object.keys(ventasMap),
-    ...clientes.map(c => c.razon_social)
-  ]);
+  // Solo clientes con ventas reales en el período
+  const clienteNames = new Set(Object.keys(ventasMap));
 
   // Determine the last 3 months for risk classification
   const lastMonth  = months[months.length - 1];
