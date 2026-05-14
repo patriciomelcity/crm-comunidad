@@ -242,7 +242,7 @@ td.month-col{padding:10px 4px;text-align:center}
         <div class="kpi-sub" id="kpi-riesgo-pct">—</div>
       </div>
       <div class="kpi-card orange">
-        <div class="kpi-label">Revenue en Riesgo</div>
+        <div class="kpi-label">Facturación Mensual en Riesgo</div>
         <div class="kpi-value" id="kpi-revenue">—</div>
         <div class="kpi-sub" id="kpi-revenue-pct">—</div>
       </div>
@@ -514,8 +514,16 @@ function updateKPIs(clients) {
   if (!total) return;
   const activos       = clients.filter(c => c.risk === 'activo').length;
   const riesgo        = clients.filter(c => c.risk === 'alto').length;
-  const revenueRiesgo = clients.filter(c => c.risk === 'alto').reduce((s, c) => s + c.total, 0);
-  const totalRevenue  = clients.reduce((s, c) => s + c.total, 0);
+  // Revenue mensual promedio de clientes en riesgo (run rate perdido por mes)
+  const clientesRiesgo = clients.filter(c => c.risk === 'alto');
+  const revenueRiesgoMensual = clientesRiesgo.reduce((s, c) => {
+    const mesesActivos = Object.values(c.meses).filter(v => v > 0).length;
+    return s + (mesesActivos > 0 ? c.total / mesesActivos : 0);
+  }, 0);
+  const totalRevenueMensual = clients.reduce((s, c) => {
+    const mesesActivos = Object.values(c.meses).filter(v => v > 0).length;
+    return s + (mesesActivos > 0 ? c.total / mesesActivos : 0);
+  }, 0);
   const gestionesClientes = new Set(clients.map(c => c.razon_social));
   const gestionesFiltradas = allGestiones.filter(g => gestionesClientes.has(g.razon_social)).length;
 
@@ -524,8 +532,8 @@ function updateKPIs(clients) {
   document.getElementById('kpi-activos-pct').textContent = `${Math.round(activos/total*100)}% del total`;
   document.getElementById('kpi-riesgo').textContent = riesgo.toLocaleString('es-AR');
   document.getElementById('kpi-riesgo-pct').textContent = `${Math.round(riesgo/total*100)}% del total`;
-  document.getElementById('kpi-revenue').textContent = '$' + (revenueRiesgo/1e6).toFixed(1) + 'M';
-  document.getElementById('kpi-revenue-pct').textContent = `${Math.round(revenueRiesgo/totalRevenue*100)}% de la facturación`;
+  document.getElementById('kpi-revenue').textContent = '$' + (revenueRiesgoMensual/1e6).toFixed(1) + 'M';
+  document.getElementById('kpi-revenue-pct').textContent = `promedio mensual en riesgo`;
   document.getElementById('kpi-gestiones').textContent = gestionesFiltradas.toLocaleString('es-AR');
 }
 
