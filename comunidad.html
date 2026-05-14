@@ -85,7 +85,7 @@ td.month-col{padding:10px 4px;text-align:center}
 .risk.alto{background:#fdecea;color:#c0392b}
 .risk.medio{background:#fff3e0;color:#e67e22}
 .risk.activo{background:#e8f5e9;color:#27ae60}
-.risk.nuevo{background:#e3f2fd;color:#1976d2}
+.risk.ocasional{background:#f5f5f5;color:#999}
 
 /* Tipo badge */
 .tipo-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:uppercase}
@@ -268,7 +268,7 @@ td.month-col{padding:10px 4px;text-align:center}
         <option value="alto">🔴 Alto riesgo</option>
         <option value="medio">🟡 Medio riesgo</option>
         <option value="activo">🟢 Activo</option>
-        <option value="nuevo">🔵 Nuevo</option>
+        <option value="ocasional">⚪ Ocasional</option>
       </select>
       <button class="btn-clear" onclick="clearFilters()">✕ Limpiar</button>
       <span class="result-count" id="result-count"></span>
@@ -472,16 +472,19 @@ async function loadData() {
     const lastActive = activos.length ? activos[activos.length - 1] : null;
 
     // Risk classification
+    // Alto:   ≥ 6 meses activos en el período + sin compras en los últimos 3 meses
+    // Medio:  3-5 meses activos + sin compras en el último mes
+    // Activo: compró en el último mes
+    // Ocasional: < 3 meses activos (comprador esporádico, no se gestiona)
     const hasLast3  = [...last3].some(m => meses[m] > 0);
     const hasLast1  = meses[last1] > 0;
-    const hadBefore = months.slice(0, -3).some(m => meses[m] > 0);
+    const mesesActivos = activos.length;
 
     let risk;
-    if (activos.length === 0) risk = 'nuevo'; // shouldn't happen
-    else if (!hasLast3 && hadBefore) risk = 'alto';
-    else if (!hasLast1 && hasLast3 && hadBefore) risk = 'medio';
-    else if (hasLast1) risk = 'activo';
-    else risk = 'nuevo';
+    if (hasLast1)                              risk = 'activo';
+    else if (!hasLast3 && mesesActivos >= 6)   risk = 'alto';
+    else if (!hasLast1 && mesesActivos >= 3)   risk = 'medio';
+    else                                       risk = 'ocasional';
 
     return {
       razon_social: name,
@@ -611,7 +614,7 @@ function tipoBadge(tipo) {
 }
 
 function riskBadge(risk) {
-  const labels = {alto:'Alto', medio:'Medio', activo:'Activo', nuevo:'Nuevo'};
+  const labels = {alto:'Alto', medio:'Medio', activo:'Activo', ocasional:'Ocasional'};
   return `<span class="risk ${risk}">${labels[risk]||risk}</span>`;
 }
 
