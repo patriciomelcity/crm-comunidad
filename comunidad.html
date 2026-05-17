@@ -246,10 +246,13 @@ td.month-col{padding:10px 4px;text-align:center}
         <div class="kpi-value" id="kpi-revenue">—</div>
         <div class="kpi-sub" id="kpi-revenue-pct">—</div>
       </div>
-      <div class="kpi-card blue" style="border-left-color:#9b59b6">
+      <div class="kpi-card blue" style="border-left-color:#9b59b6;cursor:pointer;transition:transform .15s,box-shadow .15s"
+           onclick="openGestionesPanel()"
+           onmouseover="this.style.boxShadow='0 4px 16px rgba(123,31,162,.2)';this.style.transform='translateY(-2px)'"
+           onmouseout="this.style.boxShadow='';this.style.transform=''">
         <div class="kpi-label">Gestiones Registradas</div>
         <div class="kpi-value" id="kpi-gestiones">—</div>
-        <div class="kpi-sub">total acumulado</div>
+        <div class="kpi-sub" style="color:#9b59b6;font-weight:600">▶ Ver todas</div>
       </div>
     </div>
 
@@ -316,6 +319,33 @@ td.month-col{padding:10px 4px;text-align:center}
 </div>
 
 <!-- ── WHATSAPP MODAL ─────────────────────────────────────────────────────── -->
+<!-- ── GESTIONES PANEL ────────────────────────────────────────────────────── -->
+<div class="drawer-overlay" id="gest-overlay" onclick="closeGestionesPanel()"></div>
+<div class="drawer" id="gest-drawer">
+  <div class="drawer-header" style="background:#4a1870">
+    <div>
+      <div class="drawer-name">💬 Todas las Gestiones</div>
+      <div class="drawer-meta" id="gest-subtitle">—</div>
+    </div>
+    <button class="btn-close" onclick="closeGestionesPanel()">✕</button>
+  </div>
+  <div style="padding:12px 16px;background:#f8f0ff;border-bottom:1px solid #e8d5f5;display:flex;gap:8px;flex-wrap:wrap">
+    <select id="gf-resultado" onchange="renderGestionesPanel()" style="padding:6px 10px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:12px;background:#fff">
+      <option value="">Todos los resultados</option>
+      <option>Positivo</option><option>Pendiente</option>
+      <option>Sin respuesta</option><option>Negativo</option>
+    </select>
+    <select id="gf-tipo" onchange="renderGestionesPanel()" style="padding:6px 10px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:12px;background:#fff">
+      <option value="">Todos los tipos</option>
+      <option>WhatsApp</option><option>Llamada</option>
+      <option>Visita</option><option>Email</option><option>Otro</option>
+    </select>
+    <input type="search" id="gf-buscar" placeholder="🔍 Buscar cliente…" oninput="renderGestionesPanel()"
+      style="padding:6px 10px;border:1.5px solid #e0e0e0;border-radius:7px;font-size:12px;flex:1;min-width:140px">
+  </div>
+  <div id="gest-list" style="overflow-y:auto;flex:1;padding:14px 16px"></div>
+</div>
+
 <div class="modal-overlay" id="wapp-modal">
   <div class="modal">
     <h3>
@@ -658,7 +688,7 @@ function renderTable() {
     <th>Último activo</th>
     <th style="text-align:right">Total período</th>
     <th>Estado</th>
-    <th>Gestiones</th>
+    <th style="text-align:center">💬</th>
     <th style="position:sticky;right:0;background:#1a1a2e"></th>
   </tr></thead>
   <tbody>`;
@@ -673,8 +703,8 @@ function renderTable() {
 
     const hasWapp = c.telefono || c.telefono2;
     const gCount = c.gestionesCount > 0
-      ? `<span style="background:#e8d5f5;color:#7b1fa2;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">${c.gestionesCount}</span>`
-      : `<span style="color:#ccc;font-size:11px">—</span>`;
+      ? `<span style="background:#7b1fa2;color:#fff;padding:3px 9px;border-radius:10px;font-size:12px;font-weight:700">${c.gestionesCount}</span>`
+      : `<span style="color:#ddd;font-size:13px">·</span>`;
 
     html += `<tr onclick="openDrawer('${c.razon_social.replace(/'/g,"\\'")}')">
       <td style="font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis">${c.razon_social}</td>
@@ -875,6 +905,54 @@ function openWappModal(name, phone) {
 
 function closeWappModal() {
   document.getElementById('wapp-modal').classList.remove('open');
+}
+
+// ── Panel Todas las Gestiones ─────────────────────────────────────────────────
+function openGestionesPanel() {
+  document.getElementById('gest-drawer').classList.add('open');
+  document.getElementById('gest-overlay').classList.add('open');
+  renderGestionesPanel();
+}
+
+function closeGestionesPanel() {
+  document.getElementById('gest-drawer').classList.remove('open');
+  document.getElementById('gest-overlay').classList.remove('open');
+}
+
+function renderGestionesPanel() {
+  const filtResultado = document.getElementById('gf-resultado').value;
+  const filtTipo      = document.getElementById('gf-tipo').value;
+  const filtBuscar    = document.getElementById('gf-buscar').value.toLowerCase();
+
+  let gests = [...allGestiones];
+  if (filtResultado) gests = gests.filter(g => g.resultado === filtResultado);
+  if (filtTipo)      gests = gests.filter(g => g.tipo === filtTipo);
+  if (filtBuscar)    gests = gests.filter(g => g.razon_social.toLowerCase().includes(filtBuscar));
+
+  document.getElementById('gest-subtitle').textContent = `${gests.length} gestión${gests.length !== 1 ? 'es' : ''}`;
+
+  if (!gests.length) {
+    document.getElementById('gest-list').innerHTML = '<div class="empty-state">No hay gestiones con esos filtros.</div>';
+    return;
+  }
+
+  const resColor = {Positivo:'#27ae60', Pendiente:'#3498db', 'Sin respuesta':'#f39c12', Negativo:'#e74c3c'};
+  const resClass = {Positivo:'positivo', Pendiente:'pendiente', 'Sin respuesta':'sin-respuesta', Negativo:'negativo'};
+
+  document.getElementById('gest-list').innerHTML = gests.map(g => `
+    <div class="gestion-item ${resClass[g.resultado]||''}" style="cursor:pointer" onclick="closeGestionesPanel();setTimeout(()=>openDrawer('${g.razon_social.replace(/'/g,"\\'")}'),200)">
+      <div class="gestion-header">
+        <span style="font-weight:700;font-size:13px;color:#1a1a2e">${g.razon_social}</span>
+        <span class="gestion-fecha">${g.fecha_gestion}</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;margin:4px 0">
+        <span style="background:#f0f0f0;color:#555;padding:2px 7px;border-radius:8px;font-size:11px;font-weight:600">${g.tipo||'—'}</span>
+        <span style="color:${resColor[g.resultado]||'#888'};font-size:12px;font-weight:700">${g.resultado||'—'}</span>
+      </div>
+      ${g.comentario ? `<div class="gestion-comment">${g.comentario}</div>` : ''}
+      ${g.fecha_seguimiento ? `<div class="gestion-seguimiento">📅 Seguimiento: ${g.fecha_seguimiento}</div>` : ''}
+      ${g.vendedor ? `<div style="font-size:11px;color:#aaa;margin-top:3px">por ${g.vendedor}</div>` : ''}
+    </div>`).join('');
 }
 
 function sendWapp() {
